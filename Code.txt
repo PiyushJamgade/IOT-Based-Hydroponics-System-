@@ -1,0 +1,177 @@
+//User:nileshkathane760@gmail.com
+//Password: Nilesh@123
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#define BLYNK_TEMPLATE_ID "TMPL3efa8NWjb"
+#define BLYNK_TEMPLATE_NAME "Hydro phonics"
+#define BLYNK_AUTH_TOKEN "Son9ip1R0A0wSrlZQXLp0kzlucKD1si5"
+
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+
+char ssid[] = "Project";
+char pass[] = "Raspberry";
+BlynkTimer timer;
+//-----------------------------------------------------------------
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+#define Relay_Pump 5
+#define Relay_FAN 18
+#define Relay_LIGHT 12
+
+#define Float_Sensor 13
+
+#include "DHT.h"
+#define DHTPIN 19
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+int Pump_Status = 1;
+int Float_Status = 1;
+int Pump_Data = 1;
+
+//===================================================
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(1, 0);
+  lcd.print("Hydrophonics");
+  lcd.setCursor(1, 1);
+  lcd.print("Using IOT       ");
+  delay(1500);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Internet        ");
+  lcd.setCursor(0, 1);
+  lcd.print("Connecting...   ");
+
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  timer.setInterval(1000L, weatherdata);
+
+
+  pinMode(Relay_Pump, OUTPUT);
+  pinMode(Relay_FAN, OUTPUT);
+  pinMode(Relay_LIGHT, OUTPUT);
+
+  pinMode(Float_Sensor, INPUT_PULLUP);
+
+  digitalWrite(Relay_Pump, HIGH);
+  digitalWrite(Relay_FAN, HIGH);
+  digitalWrite(Relay_LIGHT, HIGH);
+  delay(1000);
+  lcd.clear();
+}
+//==============================================
+void loop() {
+  Blynk.run();
+  timer.run();
+
+  if (digitalRead(Float_Sensor) == LOW) {
+    Float_Status = 0;
+  } else {
+    Float_Status = 1;
+  }
+
+  Pump_Status = Pump_Data  + Float_Status;
+  Serial.println("Pump Status" + String(Pump_Status));
+  digitalWrite(Relay_Pump, Pump_Status);
+
+  if (Pump_Status == 0) {
+    lcd.setCursor(0, 0);
+    lcd.print("P:ON ");
+  } else {
+    lcd.setCursor(0, 0);
+    lcd.print("P:OFF");
+  }
+}
+//================== PUMP =================
+BLYNK_WRITE(V0) {
+  Pump_Data  = param.asInt();
+  //Serial.println(Relay_status);
+  //------------
+}
+//-----------------------------------------------------
+BLYNK_WRITE(V1) {
+  int Relay_status = param.asInt();
+  //Serial.println(Relay_status);
+  digitalWrite(Relay_FAN, Relay_status);
+  if (Relay_status == 0) {
+    lcd.setCursor(6, 0);
+    lcd.print("F:ON ");
+  } else {
+    lcd.setCursor(6, 0);
+    lcd.print("F:OFF");
+  }
+}
+//------------------------------------------------------
+BLYNK_WRITE(V2) {
+  int Relay_status = param.asInt();
+  //Serial.println(Relay_status);
+  digitalWrite(Relay_LIGHT, Relay_status);
+  if (Relay_status == 0) {
+    lcd.setCursor(12, 0);
+    lcd.print("L:ON ");
+  } else {
+    lcd.setCursor(12, 0);
+    lcd.print("F:OFF");
+  }
+}
+//=====================================================
+void weatherdata() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float f = dht.readTemperature(true);
+
+  if (isnan(h) || isnan(t) || isnan(f)) {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
+  float hif = dht.computeHeatIndex(f, h);
+  float hic = dht.computeHeatIndex(t, h, false);
+  //Serial.print(F("Humidity: "));
+  Blynk.virtualWrite(V3, t);
+  Blynk.virtualWrite(V4, h);
+  // Serial.println("Humidity   :" + String(h) + String("% "));
+  // Serial.println("Temperature:" + String(t) + String("C "));
+
+  lcd.setCursor(0, 1);
+  lcd.print("H:" + String(h) + String("%") + String("T:") + String(t) + String("C"));
+
+  if (h >= 80) {
+    Blynk.logEvent("hstatus", String("Alert!!! chances for Rain"));
+  }
+  //delay(500);
+}
+//=====================================================================================
