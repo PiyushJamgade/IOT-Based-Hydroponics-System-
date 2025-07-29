@@ -1,30 +1,3 @@
-//User:nileshkathane760@gmail.com
-//Password: Nilesh@123
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #define BLYNK_TEMPLATE_ID "TMPL3efa8NWjb"
 #define BLYNK_TEMPLATE_NAME "Hydro phonics"
 #define BLYNK_AUTH_TOKEN "Son9ip1R0A0wSrlZQXLp0kzlucKD1si5"
